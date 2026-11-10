@@ -49,8 +49,8 @@ try {
     exit;
 }
 
-$extraScripts = [$baseUrl . '/assets/js/kasir.js'];
 require_once __DIR__ . '/../templates/header.php';
+$extraScripts = [$baseUrl . '/assets/js/kasir.js'];
 ?>
 
 <div class="container-fluid p-0">
