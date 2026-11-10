@@ -1,0 +1,274 @@
+/**
+ * RestoKita - Style CSS Khusus
+ * Tema: Dark Sidebar + Orange Accent (#ff6b35)
+ */
+
+:root {
+    --resto-primary: #ff6b35;
+    --resto-primary-hover: #e85924;
+    --resto-primary-light: #fff2ed;
+    --resto-dark: #1e293b;
+    --resto-darker: #0f172a;
+    --resto-sidebar-bg: #1e293b;
+    --resto-sidebar-text: #cbd5e1;
+    --resto-sidebar-hover: #334155;
+    --resto-sidebar-active: #ff6b35;
+    --resto-bg: #f8fafc;
+    --resto-card-bg: #ffffff;
+    --resto-border: #e2e8f0;
+}
+
+body {
+    background-color: var(--resto-bg);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #334155;
+    min-height: 100vh;
+}
+
+/* Tombol Custom Orange */
+.btn-resto {
+    background-color: var(--resto-primary);
+    color: #ffffff;
+    border: none;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+.btn-resto:hover, .btn-resto:focus {
+    background-color: var(--resto-primary-hover);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
+.btn-outline-resto {
+    color: var(--resto-primary);
+    border: 1px solid var(--resto-primary);
+    background: transparent;
+    font-weight: 500;
+}
+.btn-outline-resto:hover, .btn-outline-resto.active {
+    background-color: var(--resto-primary);
+    color: #ffffff;
+    border-color: var(--resto-primary);
+}
+
+.text-resto {
+    color: var(--resto-primary) !important;
+}
+
+.bg-resto-light {
+    background-color: var(--resto-primary-light);
+}
+
+/* Layout Wrapper */
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Sidebar Styling */
+.app-sidebar {
+    width: 260px;
+    background-color: var(--resto-sidebar-bg);
+    color: var(--resto-sidebar-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+}
+
+.sidebar-brand {
+    padding: 1.5rem 1.25rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.sidebar-brand i {
+    color: var(--resto-primary);
+    font-size: 1.6rem;
+}
+
+.sidebar-nav {
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-grow: 1;
+}
+
+.sidebar-nav .nav-link {
+    color: var(--resto-sidebar-text);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.sidebar-nav .nav-link i {
+    font-size: 1.15rem;
+    width: 24px;
+    text-align: center;
+}
+.sidebar-nav .nav-link:hover {
+    background-color: var(--resto-sidebar-hover);
+    color: #ffffff;
+}
+.sidebar-nav .nav-link.active {
+    background-color: var(--resto-primary);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(255, 107, 53, 0.35);
+}
+
+.sidebar-footer {
+    padding: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: var(--resto-darker);
+}
+
+/* Main Content Styling */
+.app-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.app-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--resto-border);
+    padding: 0.85rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-content {
+    padding: 1.75rem;
+    flex-grow: 1;
+}
+
+/* Card Styling */
+.card {
+    border: 1px solid var(--resto-border);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    background-color: #ffffff;
+}
+
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--resto-border);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+/* Stat Card */
+.stat-card {
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: transform 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Kasir POS Layout */
+.menu-card {
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+    height: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+.menu-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    border-color: var(--resto-primary);
+}
+.menu-icon-wrapper {
+    height: 90px;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--resto-primary);
+    font-size: 2.5rem;
+}
+
+.cart-panel {
+    position: sticky;
+    top: 1rem;
+}
+.cart-items-wrapper {
+    max-height: 380px;
+    overflow-y: auto;
+}
+.cart-item-row {
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed var(--resto-border);
+}
+.cart-qty-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+/* Modal Struk Struk Kasir / Print */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #struk-print-area, #struk-print-area * {
+        visibility: visible;
+    }
+    #struk-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto;
+        padding: 10px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Responsive adjustment */
+@media (max-width: 991.98px) {
+    .app-wrapper {
+        flex-direction: column;
+    }
+    .app-sidebar {
+        width: 100%;
+    }
+    .cart-panel {
+        position: static;
+        margin-top: 1.5rem;
+    }
+}

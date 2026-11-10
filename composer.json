@@ -1,0 +1,27 @@
+{
+    "name": "restokita/pos-kasir",
+    "description": "Aplikasi Web POS Kasir Restoran RestoKita untuk UKK SMK Jurusan PPLG (Pemrogram Junior)",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "RestoKita\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RestoKita\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0 || ^11.0"
+    },
+    "scripts": {
+        "serve": "php -S localhost:8000 -t public",
+        "db:setup": "php setup_db.php",
+        "test": "phpunit"
+    }
+}
