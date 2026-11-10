@@ -37,7 +37,7 @@ class Product
      */
     public function getAll(string $search = '', string $kategori = ''): array
     {
-        $sql = 'SELECT id_produk, nama_produk, kategori, harga, stok, created_at, updated_at 
+        $sql = 'SELECT id_produk, nama_produk, kategori, harga, stok, gambar, created_at, updated_at 
                 FROM produk 
                 WHERE 1=1';
         $params = [];
@@ -69,7 +69,7 @@ class Product
     public function getById(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT id_produk, nama_produk, kategori, harga, stok, created_at, updated_at 
+            'SELECT id_produk, nama_produk, kategori, harga, stok, gambar, created_at, updated_at 
              FROM produk 
              WHERE id_produk = :id 
              LIMIT 1'
@@ -83,14 +83,14 @@ class Product
     /**
      * Menyimpan data produk baru ke database.
      *
-     * @param array{nama_produk: string, kategori: string, harga: float|int, stok: int} $data
+     * @param array{nama_produk: string, kategori: string, harga: float|int, stok: int, gambar?: string|null} $data
      * @return int ID produk yang baru saja dibuat
      * @throws RuntimeException Jika penyimpanan gagal
      */
     public function create(array $data): int
     {
-        $sql = 'INSERT INTO produk (nama_produk, kategori, harga, stok) 
-                VALUES (:nama_produk, :kategori, :harga, :stok)';
+        $sql = 'INSERT INTO produk (nama_produk, kategori, harga, stok, gambar) 
+                VALUES (:nama_produk, :kategori, :harga, :stok, :gambar)';
 
         $stmt = $this->db->prepare($sql);
         $success = $stmt->execute([
@@ -98,6 +98,7 @@ class Product
             ':kategori'    => trim($data['kategori']),
             ':harga'       => (float) $data['harga'],
             ':stok'        => (int) $data['stok'],
+            ':gambar'      => !empty($data['gambar']) ? trim($data['gambar']) : null,
         ]);
 
         if (!$success) {
@@ -111,27 +112,40 @@ class Product
      * Memperbarui data produk yang sudah ada.
      *
      * @param int $id ID produk yang akan diperbarui
-     * @param array{nama_produk: string, kategori: string, harga: float|int, stok: int} $data
+     * @param array{nama_produk: string, kategori: string, harga: float|int, stok: int, gambar?: string|null} $data
      * @return bool True jika berhasil diperbarui
      * @throws RuntimeException Jika pembaruan gagal
      */
     public function update(int $id, array $data): bool
     {
-        $sql = 'UPDATE produk 
-                SET nama_produk = :nama_produk, 
-                    kategori = :kategori, 
-                    harga = :harga, 
-                    stok = :stok 
-                WHERE id_produk = :id';
-
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
+        $params = [
             ':nama_produk' => trim($data['nama_produk']),
             ':kategori'    => trim($data['kategori']),
             ':harga'       => (float) $data['harga'],
             ':stok'        => (int) $data['stok'],
             ':id'          => $id,
-        ]);
+        ];
+
+        if (array_key_exists('gambar', $data)) {
+            $sql = 'UPDATE produk 
+                    SET nama_produk = :nama_produk, 
+                        kategori = :kategori, 
+                        harga = :harga, 
+                        stok = :stok, 
+                        gambar = :gambar 
+                    WHERE id_produk = :id';
+            $params[':gambar'] = !empty($data['gambar']) ? trim($data['gambar']) : null;
+        } else {
+            $sql = 'UPDATE produk 
+                    SET nama_produk = :nama_produk, 
+                        kategori = :kategori, 
+                        harga = :harga, 
+                        stok = :stok 
+                    WHERE id_produk = :id';
+        }
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
     }
 
     /**

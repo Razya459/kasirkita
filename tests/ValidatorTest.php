@@ -157,4 +157,72 @@ class ValidatorTest extends TestCase
         ]);
         $this->assertEmpty($validCart);
     }
+
+    /**
+     * Uji validasi input diskon manual.
+     */
+    public function testValidateDiscount(): void
+    {
+        // Valid diskon normal
+        $this->assertEmpty($this->validator->validateDiscount(5000, 50000));
+        $this->assertEmpty($this->validator->validateDiscount(0, 50000));
+        $this->assertEmpty($this->validator->validateDiscount(null, 50000));
+        $this->assertEmpty($this->validator->validateDiscount('', 50000));
+
+        // Diskon bukan angka
+        $errorsNotNum = $this->validator->validateDiscount('diskon-spesial', 50000);
+        $this->assertArrayHasKey('discount', $errorsNotNum);
+
+        // Diskon negatif
+        $errorsNeg = $this->validator->validateDiscount(-500, 50000);
+        $this->assertArrayHasKey('discount', $errorsNeg);
+
+        // Diskon melebihi subtotal
+        $errorsExceed = $this->validator->validateDiscount(60000, 50000);
+        $this->assertArrayHasKey('discount', $errorsExceed);
+    }
+
+    /**
+     * Uji validasi file unggahan gambar produk.
+     */
+    public function testValidateImage(): void
+    {
+        // 1. Gambar tidak wajib dan tidak diunggah -> lolos
+        $this->assertEmpty($this->validator->validateImage(null, false));
+        $this->assertEmpty($this->validator->validateImage(['error' => UPLOAD_ERR_NO_FILE], false));
+
+        // 2. Gambar wajib tapi tidak diunggah -> error
+        $errorsRequired = $this->validator->validateImage(null, true);
+        $this->assertArrayHasKey('gambar', $errorsRequired);
+
+        // 3. File upload error -> error
+        $errorsUpload = $this->validator->validateImage(['error' => UPLOAD_ERR_INI_SIZE], false);
+        $this->assertArrayHasKey('gambar', $errorsUpload);
+
+        // 4. File ukuran melebihi 2MB -> error
+        $oversized = [
+            'error' => UPLOAD_ERR_OK,
+            'name'  => 'makanan.jpg',
+            'size'  => 3 * 1024 * 1024,
+        ];
+        $errorsSize = $this->validator->validateImage($oversized, false);
+        $this->assertArrayHasKey('gambar', $errorsSize);
+
+        // 5. Ekstensi tidak didukung (contoh .pdf atau .exe) -> error
+        $invalidExt = [
+            'error' => UPLOAD_ERR_OK,
+            'name'  => 'script.exe',
+            'size'  => 1024,
+        ];
+        $errorsExt = $this->validator->validateImage($invalidExt, false);
+        $this->assertArrayHasKey('gambar', $errorsExt);
+
+        // 6. File valid dummy
+        $validFile = [
+            'error' => UPLOAD_ERR_OK,
+            'name'  => 'nasi_goreng.jpg',
+            'size'  => 500 * 1024,
+        ];
+        $this->assertEmpty($this->validator->validateImage($validFile, false));
+    }
 }

@@ -44,10 +44,11 @@ class Transaction
      *
      * @param int $idPengguna ID kasir yang memproses
      * @param array<int, array{id_produk: int, qty: int}> $rawItems Daftar item belanja
+     * @param float|null $customDiscount Nilai nominal diskon manual (opsional, jika diketik sendiri oleh kasir)
      * @return array<string, mixed> Data transaksi yang berhasil disimpan
      * @throws RuntimeException Jika stok tidak mencukupi atau proses database gagal
      */
-    public function process(int $idPengguna, array $rawItems): array
+    public function process(int $idPengguna, array $rawItems, ?float $customDiscount = null): array
     {
         if (empty($rawItems)) {
             throw new RuntimeException('Keranjang belanja kosong.');
@@ -105,8 +106,8 @@ class Transaction
                 ];
             }
 
-            // 2. Hitung subtotal, diskon, pajak, dan total bayar dengan logika TransactionCalculator
-            $calculation = $this->calculator->calculate($calcItems);
+            // 2. Hitung subtotal, diskon (otomatis atau custom), pajak, dan total bayar dengan logika TransactionCalculator
+            $calculation = $this->calculator->calculate($calcItems, $customDiscount);
 
             // 3. Buat nomor kode transaksi unik: TRX-YYYYMMDD-XXXX
             $kodeTransaksi = 'TRX-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));

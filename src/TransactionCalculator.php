@@ -201,9 +201,32 @@ class TransactionCalculator
     }
 
     /**
+     * Menghitung nilai diskon berdasarkan persentase custom (0 - 100%).
+     *
+     * @param float $subtotal Nilai subtotal belanja
+     * @param float $percent Nilai persentase diskon (0 s.d. 100)
+     * @return float Nilai nominal potongan diskon (Rp)
+     * @throws InvalidArgumentException Jika subtotal negatif atau persentase di luar rentang 0-100
+     */
+    public function calculateDiscountByPercent(float $subtotal, float $percent): float
+    {
+        if ($subtotal < 0) {
+            throw new InvalidArgumentException('Subtotal tidak boleh bernilai negatif.');
+        }
+
+        if ($percent < 0 || $percent > 100) {
+            throw new InvalidArgumentException('Persentase diskon harus berada di antara 0 dan 100.');
+        }
+
+        return round($subtotal * ($percent / 100), 2);
+    }
+
+    /**
      * Melakukan kalkulasi menyeluruh sekaligus dari daftar item pesanan.
+     * Mendukung kalkulasi diskon otomatis bertingkat maupun diskon custom/manual yang diketik.
      *
      * @param array<int, array{harga: float|int, qty: int}> $items Daftar item
+     * @param float|null $customDiscount Nilai nominal diskon manual (null jika menggunakan aturan bertingkat otomatis)
      * @return array{
      *     subtotal: float,
      *     discount_rate: float,
@@ -213,16 +236,29 @@ class TransactionCalculator
      *     tax: float,
      *     total_bayar: float
      * } Hasil perhitungan lengkap
-     * @throws InvalidArgumentException Jika item tidak valid
+     * @throws InvalidArgumentException Jika item tidak valid atau diskon melebihi subtotal
      */
-    public function calculate(array $items): array
+    public function calculate(array $items, ?float $customDiscount = null): array
     {
-        $subtotal        = $this->calculateSubtotal($items);
-        $discountRate    = $this->getDiscountRate($subtotal);
-        $discount        = $this->calculateDiscount($subtotal);
-        $taxBase         = $this->calculateTaxBase($subtotal, $discount);
-        $tax             = $this->calculateTax($subtotal, $discount);
-        $totalBayar      = $this->calculateTotal($subtotal, $discount, $tax);
+        $subtotal = $this->calculateSubtotal($items);
+
+        if ($customDiscount !== null) {
+            if ($customDiscount < 0) {
+                throw new InvalidArgumentException('Diskon tidak boleh bernilai negatif.');
+            }
+            if ($customDiscount > $subtotal) {
+                throw new InvalidArgumentException('Diskon tidak boleh melebihi nilai subtotal.');
+            }
+            $discount = round($customDiscount, 2);
+            $discountRate = ($subtotal > 0) ? round($discount / $subtotal, 4) : 0.0;
+        } else {
+            $discountRate = $this->getDiscountRate($subtotal);
+            $discount     = $this->calculateDiscount($subtotal);
+        }
+
+        $taxBase    = $this->calculateTaxBase($subtotal, $discount);
+        $tax        = $this->calculateTax($subtotal, $discount);
+        $totalBayar = $this->calculateTotal($subtotal, $discount, $tax);
 
         return [
             'subtotal'         => $subtotal,

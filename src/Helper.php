@@ -126,4 +126,53 @@ class Helper
 
         return "{$tgl} " . ($bulanIndo[$bln] ?? '') . " {$thn}, {$waktu}";
     }
+
+    /**
+     * Mengunggah file gambar ke folder public assets dan menghasilkan relative path.
+     *
+     * @param array<string, mixed> $file Data file dari $_FILES['gambar']
+     * @param string $targetSubDir Subdirektori penyimpanan di dalam public/assets/
+     * @return string|null Relative path gambar dari public (contoh: "assets/uploads/produk/xxx.jpg")
+     */
+    public static function uploadImage(array $file, string $targetSubDir = 'uploads/produk'): ?string
+    {
+        if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $baseDir = __DIR__ . '/../public/assets/' . trim($targetSubDir, '/');
+        if (!is_dir($baseDir)) {
+            mkdir($baseDir, 0777, true);
+        }
+
+        $ext = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        $newFilename = 'menu_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destination = $baseDir . '/' . $newFilename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            return 'assets/' . trim($targetSubDir, '/') . '/' . $newFilename;
+        }
+
+        return null;
+    }
+
+    /**
+     * Menghapus file gambar fisik dari server jika ada.
+     *
+     * @param string|null $relativePath Relative path file dari public
+     * @return bool True jika file berhasil dihapus atau memang tidak ada
+     */
+    public static function deleteImage(?string $relativePath): bool
+    {
+        if (empty($relativePath)) {
+            return true;
+        }
+
+        $fullPath = __DIR__ . '/../public/' . ltrim($relativePath, '/\\');
+        if (file_exists($fullPath) && is_file($fullPath)) {
+            return @unlink($fullPath);
+        }
+
+        return true;
+    }
 }

@@ -20,6 +20,82 @@ class Validator
     public const ALLOWED_CATEGORIES = ['Makanan', 'Minuman', 'Snack'];
 
     /**
+     * Format ekstensi gambar yang didukung.
+     */
+    public const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+
+    /**
+     * Format MIME types gambar yang diperbolehkan.
+     */
+    public const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
+    /**
+     * Ukuran maksimum file gambar (dalam byte, default 2MB).
+     */
+    public const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+
+    /**
+     * Validasi file unggahan gambar produk.
+     *
+     * @param array<string, mixed>|null $file Objek $_FILES['gambar']
+     * @param bool $isRequired Apakah gambar wajib diunggah
+     * @return array<string, string> Daftar pesan error
+     */
+    public function validateImage(?array $file, bool $isRequired = false): array
+    {
+        $errors = [];
+
+        if ($file === null || !isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+            if ($isRequired) {
+                $errors['gambar'] = 'Gambar produk wajib diunggah.';
+            }
+            return $errors;
+        }
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $errors['gambar'] = 'Terjadi kesalahan saat mengunggah file gambar (Error code: ' . $file['error'] . ').';
+            return $errors;
+        }
+
+        // Cek ukuran file
+        if (($file['size'] ?? 0) > self::MAX_IMAGE_SIZE) {
+            $errors['gambar'] = 'Ukuran gambar maksimal adalah 2 MB.';
+            return $errors;
+        }
+
+        // Cek ekstensi file
+        $fileName = (string) ($file['name'] ?? '');
+        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (!in_array($ext, self::ALLOWED_IMAGE_EXTENSIONS, true)) {
+            $errors['gambar'] = 'Format file tidak didukung. Harap unggah file JPG, JPEG, PNG, atau WEBP.';
+            return $errors;
+        }
+
+        // Cek MIME type dengan finfo jika tersedia
+        $tmpName = (string) ($file['tmp_name'] ?? '');
+        if ($tmpName !== '' && file_exists($tmpName)) {
+            if (function_exists('finfo_open')) {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+
+                if (!in_array($mime, self::ALLOWED_IMAGE_MIMES, true)) {
+                    $errors['gambar'] = 'Tipe MIME file gambar tidak valid (' . $mime . ').';
+                    return $errors;
+                }
+            } elseif (function_exists('getimagesize')) {
+                $imageInfo = @getimagesize($tmpName);
+                if ($imageInfo === false) {
+                    $errors['gambar'] = 'File yang diunggah bukan file gambar yang valid.';
+                    return $errors;
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
      * Validasi data input form produk (tambah dan edit).
      *
      * @param array<string, mixed> $data Data input dari $_POST
@@ -126,6 +202,37 @@ class Validator
             if ($qty === null || !is_numeric($qty) || (int) $qty <= 0) {
                 $errors["item_{$index}_qty"] = "Jumlah (qty) pada baris " . ($index + 1) . " harus berupa angka minimal 1.";
             }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validasi nilai diskon (manual/custom) yang diinputkan oleh kasir.
+     *
+     * @param mixed $discount Nilai diskon
+     * @param float|null $subtotal Nilai subtotal belanja untuk validasi batas maksimum
+     * @return array<string, string> Daftar error validasi
+     */
+    public function validateDiscount(mixed $discount, ?float $subtotal = null): array
+    {
+        $errors = [];
+
+        if ($discount === null || $discount === '') {
+            return $errors;
+        }
+
+        if (!is_numeric($discount)) {
+            $errors['discount'] = 'Nilai diskon harus berupa angka.';
+            return $errors;
+        }
+
+        $discountVal = (float) $discount;
+
+        if ($discountVal < 0) {
+            $errors['discount'] = 'Diskon tidak boleh bernilai negatif.';
+        } elseif ($subtotal !== null && $subtotal >= 0 && $discountVal > $subtotal) {
+            $errors['discount'] = 'Diskon tidak boleh melebihi nilai subtotal belanja.';
         }
 
         return $errors;

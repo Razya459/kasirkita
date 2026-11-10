@@ -35,14 +35,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $validator = new Validator();
     $errors = $validator->validateProduct($formData);
 
+    // Validasi file gambar jika ada yang diunggah
+    $imageFile = $_FILES['gambar'] ?? null;
+    $imageErrors = $validator->validateImage($imageFile, false);
+    if (!empty($imageErrors)) {
+        $errors = array_merge($errors, $imageErrors);
+    }
+
     if (empty($errors)) {
         try {
+            $gambarPath = null;
+            if ($imageFile && isset($imageFile['error']) && $imageFile['error'] === UPLOAD_ERR_OK) {
+                $gambarPath = Helper::uploadImage($imageFile);
+            }
+
             $productModel = new Product();
             $productModel->create([
                 'nama_produk' => $formData['nama_produk'],
                 'kategori'    => $formData['kategori'],
                 'harga'       => (float) $formData['harga'],
                 'stok'        => (int) $formData['stok'],
+                'gambar'      => $gambarPath,
             ]);
 
             Helper::setFlash('success', "Menu '{$formData['nama_produk']}' berhasil ditambahkan ke daftar menu.");
@@ -73,7 +86,7 @@ require_once __DIR__ . '/../../templates/header.php';
                         <div class="alert alert-danger small py-2"><?= Helper::e($errors['general']) ?></div>
                     <?php endif; ?>
 
-                    <form action="tambah.php" method="POST" novalidate>
+                    <form action="tambah.php" method="POST" enctype="multipart/form-data" novalidate>
                         <!-- Nama Produk -->
                         <div class="mb-3">
                             <label for="nama_produk" class="form-label fw-semibold small">Nama Menu Produk <span class="text-danger">*</span></label>
@@ -123,7 +136,7 @@ require_once __DIR__ . '/../../templates/header.php';
                         </div>
 
                         <!-- Harga Satuan -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="harga" class="form-label fw-semibold small">Harga Satuan (Rupiah) <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light">Rp</span>
@@ -143,6 +156,35 @@ require_once __DIR__ . '/../../templates/header.php';
                             <small class="text-muted">Masukkan angka tanpa titik atau koma.</small>
                         </div>
 
+                        <!-- Unggah Foto / Gambar Menu -->
+                        <div class="mb-4">
+                            <label for="gambar" class="form-label fw-semibold small">
+                                <i class="bi bi-image text-resto me-1"></i>Foto / Gambar Menu <span class="text-muted fw-normal">(Opsional)</span>
+                            </label>
+                            <input type="file" 
+                                   class="form-control <?= isset($errors['gambar']) ? 'is-invalid' : '' ?>" 
+                                   id="gambar" 
+                                   name="gambar" 
+                                   accept="image/jpeg,image/png,image/webp,image/jpg" 
+                                   onchange="previewImage(this)">
+                            <?php if (isset($errors['gambar'])): ?>
+                                <div class="invalid-feedback"><?= Helper::e($errors['gambar']) ?></div>
+                            <?php endif; ?>
+                            <small class="text-muted">Mendukung format JPG, JPEG, PNG, WEBP. Maksimal ukuran 2 MB.</small>
+
+                            <!-- Kotak Live Preview Gambar -->
+                            <div id="image-preview-wrapper" class="mt-2 d-none">
+                                <div class="p-2 border rounded-3 bg-light d-inline-block text-center">
+                                    <img id="image-preview" src="#" alt="Preview Gambar" class="rounded object-fit-cover shadow-sm" style="width: 140px; height: 110px;">
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;" onclick="resetImagePreview()">
+                                            <i class="bi bi-x-circle me-1"></i> Batal Pilih Gambar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Tombol Submit -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-resto px-4 py-2 fw-semibold">
@@ -156,5 +198,29 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
+
+<script>
+function previewImage(input) {
+    const previewWrapper = document.getElementById('image-preview-wrapper');
+    const previewImg = document.getElementById('image-preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewWrapper.classList.remove('d-none');
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        resetImagePreview();
+    }
+}
+
+function resetImagePreview() {
+    const input = document.getElementById('gambar');
+    if (input) input.value = '';
+    const previewWrapper = document.getElementById('image-preview-wrapper');
+    if (previewWrapper) previewWrapper.classList.add('d-none');
+}
+</script>
 
 <?php require_once __DIR__ . '/../../templates/footer.php'; ?>

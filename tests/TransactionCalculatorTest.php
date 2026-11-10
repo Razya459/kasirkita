@@ -224,4 +224,84 @@ class TransactionCalculatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->calculator->calculateTaxBase(10000.0, 15000.0);
     }
+
+    /**
+     * Uji kalkulasi dengan diskon manual (custom discount) nominal.
+     */
+    public function testCalculateWithCustomDiscountNominal(): void
+    {
+        $items = [
+            ['harga' => 20000, 'qty' => 2], // Subtotal 40.000
+        ];
+
+        // Diskon manual Rp 5.000
+        $result = $this->calculator->calculate($items, 5000.0);
+
+        $this->assertEquals(40000.0, $result['subtotal']);
+        $this->assertEquals(5000.0, $result['discount']);
+        $this->assertEquals(35000.0, $result['tax_base']); // 40.000 - 5.000
+        $this->assertEquals(3500.0, $result['tax']);       // 10% dari 35.000
+        $this->assertEquals(38500.0, $result['total_bayar']); // 35.000 + 3.500
+    }
+
+    /**
+     * Uji kalkulasi dengan diskon custom 0 (tanpa diskon).
+     */
+    public function testCalculateWithCustomDiscountZero(): void
+    {
+        $items = [
+            ['harga' => 60000, 'qty' => 1], // Subtotal 60.000 (normalnya dapat diskon 10%)
+        ];
+
+        // Paksa diskon 0 (override tier)
+        $result = $this->calculator->calculate($items, 0.0);
+
+        $this->assertEquals(60000.0, $result['subtotal']);
+        $this->assertEquals(0.0, $result['discount']);
+        $this->assertEquals(60000.0, $result['tax_base']);
+        $this->assertEquals(6000.0, $result['tax']);
+        $this->assertEquals(66000.0, $result['total_bayar']);
+    }
+
+    /**
+     * Uji kalkulasi dengan diskon custom melebihi subtotal melempar exception.
+     */
+    public function testCalculateWithCustomDiscountExceedsSubtotalThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Diskon tidak boleh melebihi nilai subtotal.');
+
+        $items = [
+            ['harga' => 10000, 'qty' => 1],
+        ];
+
+        $this->calculator->calculate($items, 15000.0);
+    }
+
+    /**
+     * Uji kalkulasi dengan diskon custom bernilai negatif melempar exception.
+     */
+    public function testCalculateWithCustomDiscountNegativeThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Diskon tidak boleh bernilai negatif.');
+
+        $items = [
+            ['harga' => 10000, 'qty' => 1],
+        ];
+
+        $this->calculator->calculate($items, -500.0);
+    }
+
+    /**
+     * Uji helper kalkulasi diskon berdasarkan persen.
+     */
+    public function testCalculateDiscountByPercent(): void
+    {
+        $subtotal = 50000.0;
+        $this->assertEquals(5000.0, $this->calculator->calculateDiscountByPercent($subtotal, 10.0));
+        $this->assertEquals(12500.0, $this->calculator->calculateDiscountByPercent($subtotal, 25.0));
+        $this->assertEquals(0.0, $this->calculator->calculateDiscountByPercent($subtotal, 0.0));
+        $this->assertEquals(50000.0, $this->calculator->calculateDiscountByPercent($subtotal, 100.0));
+    }
 }

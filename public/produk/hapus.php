@@ -28,6 +28,7 @@ try {
     }
 
     $productModel->delete($id);
+    Helper::deleteImage($product['gambar'] ?? null);
     Helper::setFlash('success', "Menu '{$product['nama_produk']}' berhasil dihapus dari sistem.");
 } catch (\Throwable $e) {
     Helper::setFlash('danger', $e->getMessage());

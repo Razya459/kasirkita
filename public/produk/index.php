@@ -114,8 +114,19 @@ try {
                                 <tr>
                                     <td class="ps-3 text-center text-muted"><?= $idx + 1 ?></td>
                                     <td>
-                                        <div class="fw-bold text-dark"><?= Helper::e($p['nama_produk']) ?></div>
-                                        <small class="text-muted">ID: #<?= (int) $p['id_produk'] ?></small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <?php if (!empty($p['gambar'])): ?>
+                                                <img src="<?= $baseUrl ?>/<?= Helper::e($p['gambar']) ?>" alt="<?= Helper::e($p['nama_produk']) ?>" class="rounded object-fit-cover shadow-sm border" style="width: 44px; height: 44px; min-width: 44px;">
+                                            <?php else: ?>
+                                                <div class="rounded bg-light border d-flex align-items-center justify-content-center text-resto" style="width: 44px; height: 44px; min-width: 44px; background-color: var(--resto-primary-light);">
+                                                    <i class="bi <?= match ($p['kategori']) { 'Makanan' => 'bi-fire', 'Minuman' => 'bi-cup-straw', 'Snack' => 'bi-cookie', default => 'bi-box' } ?> fs-5"></i>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="fw-bold text-dark"><?= Helper::e($p['nama_produk']) ?></div>
+                                                <small class="text-muted">ID: #<?= (int) $p['id_produk'] ?></small>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         <?php

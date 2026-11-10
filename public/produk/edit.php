@@ -48,14 +48,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $validator = new Validator();
     $errors = $validator->validateProduct($formData);
 
+    // Validasi file gambar jika ada yang diunggah
+    $imageFile = $_FILES['gambar'] ?? null;
+    $imageErrors = $validator->validateImage($imageFile, false);
+    if (!empty($imageErrors)) {
+        $errors = array_merge($errors, $imageErrors);
+    }
+
     if (empty($errors)) {
         try {
-            $productModel->update($id, [
+            $updatePayload = [
                 'nama_produk' => $formData['nama_produk'],
                 'kategori'    => $formData['kategori'],
                 'harga'       => (float) $formData['harga'],
                 'stok'        => (int) $formData['stok'],
-            ]);
+            ];
+
+            // Cek apakah ada file gambar baru yang diunggah
+            if ($imageFile && isset($imageFile['error']) && $imageFile['error'] === UPLOAD_ERR_OK) {
+                $newGambar = Helper::uploadImage($imageFile);
+                if ($newGambar) {
+                    Helper::deleteImage($product['gambar'] ?? null);
+                    $updatePayload['gambar'] = $newGambar;
+                }
+            } elseif (isset($_POST['hapus_gambar']) && $_POST['hapus_gambar'] === '1') {
+                Helper::deleteImage($product['gambar'] ?? null);
+                $updatePayload['gambar'] = null;
+            }
+
+            $productModel->update($id, $updatePayload);
 
             Helper::setFlash('success', "Data menu '{$formData['nama_produk']}' berhasil diperbarui.");
             Helper::redirect('index.php');
@@ -85,7 +106,7 @@ require_once __DIR__ . '/../../templates/header.php';
                         <div class="alert alert-danger small py-2"><?= Helper::e($errors['general']) ?></div>
                     <?php endif; ?>
 
-                    <form action="edit.php?id=<?= $id ?>" method="POST" novalidate>
+                    <form action="edit.php?id=<?= $id ?>" method="POST" enctype="multipart/form-data" novalidate>
                         <!-- Nama Produk -->
                         <div class="mb-3">
                             <label for="nama_produk" class="form-label fw-semibold small">Nama Menu Produk <span class="text-danger">*</span></label>
@@ -133,7 +154,7 @@ require_once __DIR__ . '/../../templates/header.php';
                         </div>
 
                         <!-- Harga Satuan -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="harga" class="form-label fw-semibold small">Harga Satuan (Rupiah) <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light">Rp</span>
@@ -151,6 +172,52 @@ require_once __DIR__ . '/../../templates/header.php';
                             </div>
                         </div>
 
+                        <!-- Foto / Gambar Menu -->
+                        <div class="mb-4">
+                            <label for="gambar" class="form-label fw-semibold small">
+                                <i class="bi bi-image text-resto me-1"></i>Foto / Gambar Menu <span class="text-muted fw-normal">(Opsional)</span>
+                            </label>
+
+                            <?php if (!empty($product['gambar'])): ?>
+                                <div class="mb-2 p-2 border rounded-3 bg-light d-flex align-items-center gap-3">
+                                    <img src="<?= $baseUrl ?>/<?= Helper::e($product['gambar']) ?>" alt="Foto Menu Saat Ini" class="rounded object-fit-cover shadow-sm" style="width: 75px; height: 60px;">
+                                    <div>
+                                        <div class="small fw-semibold text-dark">Foto Menu Saat Ini</div>
+                                        <div class="form-check mt-1">
+                                            <input class="form-check-input" type="checkbox" name="hapus_gambar" value="1" id="hapus_gambar">
+                                            <label class="form-check-label small text-danger" for="hapus_gambar">
+                                                Hapus foto ini (gunakan icon bawaan)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <input type="file" 
+                                   class="form-control <?= isset($errors['gambar']) ? 'is-invalid' : '' ?>" 
+                                   id="gambar" 
+                                   name="gambar" 
+                                   accept="image/jpeg,image/png,image/webp,image/jpg" 
+                                   onchange="previewImage(this)">
+                            <?php if (isset($errors['gambar'])): ?>
+                                <div class="invalid-feedback"><?= Helper::e($errors['gambar']) ?></div>
+                            <?php endif; ?>
+                            <small class="text-muted">Pilih file baru jika ingin mengganti foto. Format: JPG, JPEG, PNG, WEBP (Maksimal 2 MB).</small>
+
+                            <!-- Live Preview Box -->
+                            <div id="image-preview-wrapper" class="mt-2 d-none">
+                                <div class="p-2 border rounded-3 bg-light d-inline-block text-center">
+                                    <div class="small fw-semibold text-primary mb-1">Preview Foto Baru:</div>
+                                    <img id="image-preview" src="#" alt="Preview Gambar" class="rounded object-fit-cover shadow-sm" style="width: 140px; height: 110px;">
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;" onclick="resetImagePreview()">
+                                            <i class="bi bi-x-circle me-1"></i> Batal Ganti Foto
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Tombol Submit -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-resto px-4 py-2 fw-semibold">
@@ -164,5 +231,29 @@ require_once __DIR__ . '/../../templates/header.php';
         </div>
     </div>
 </div>
+
+<script>
+function previewImage(input) {
+    const previewWrapper = document.getElementById('image-preview-wrapper');
+    const previewImg = document.getElementById('image-preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewWrapper.classList.remove('d-none');
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        resetImagePreview();
+    }
+}
+
+function resetImagePreview() {
+    const input = document.getElementById('gambar');
+    if (input) input.value = '';
+    const previewWrapper = document.getElementById('image-preview-wrapper');
+    if (previewWrapper) previewWrapper.classList.add('d-none');
+}
+</script>
 
 <?php require_once __DIR__ . '/../../templates/footer.php'; ?>

@@ -19,11 +19,19 @@ $errorMessage = null;
 
 // Proses simpan transaksi saat form disubmit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cartPayload = $_POST['cart_payload'] ?? '';
-    $rawItems = json_decode($cartPayload, true);
+    $cartPayload    = $_POST['cart_payload'] ?? '';
+    $rawItems       = json_decode($cartPayload, true);
+    $customDiscount = (isset($_POST['custom_discount']) && $_POST['custom_discount'] !== '') 
+                        ? (float) $_POST['custom_discount'] 
+                        : null;
 
     $validator = new Validator();
     $validationErrors = $validator->validateCart(is_array($rawItems) ? $rawItems : []);
+
+    if ($customDiscount !== null) {
+        $discountErrors   = $validator->validateDiscount($customDiscount);
+        $validationErrors = array_merge($validationErrors, $discountErrors);
+    }
 
     if (!empty($validationErrors)) {
         $errorMessage = reset($validationErrors);
@@ -32,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $transactionModel = new Transaction();
             $idPengguna = Auth::id() ?? 1;
 
-            $lastTransaction = $transactionModel->process($idPengguna, $rawItems);
+            $lastTransaction = $transactionModel->process($idPengguna, $rawItems, $customDiscount);
             Helper::setFlash('success', "Transaksi {$lastTransaction['kode_transaksi']} berhasil diproses!");
         } catch (\Throwable $e) {
             $errorMessage = $e->getMessage();
@@ -50,7 +58,7 @@ try {
 }
 
 require_once __DIR__ . '/../templates/header.php';
-$extraScripts = [$baseUrl . '/assets/js/kasir.js'];
+$extraScripts = [$baseUrl . '/assets/js/kasir.js?v=' . (file_exists(__DIR__ . '/assets/js/kasir.js') ? filemtime(__DIR__ . '/assets/js/kasir.js') : time())];
 ?>
 
 <div class="container-fluid p-0">
@@ -114,9 +122,15 @@ $extraScripts = [$baseUrl . '/assets/js/kasir.js'];
                                  data-category="<?= Helper::e($p['kategori']) ?>" 
                                  data-nama="<?= Helper::e($p['nama_produk']) ?>">
                                 <div class="card menu-card border h-100 <?= $isOutOfStock ? 'opacity-50' : '' ?>">
-                                    <div class="menu-icon-wrapper">
-                                        <i class="bi <?= $iconClass ?>"></i>
-                                    </div>
+                                    <?php if (!empty($p['gambar'])): ?>
+                                        <div class="menu-image-wrapper position-relative" style="height: 110px; overflow: hidden; background-color: #f1f5f9;">
+                                            <img src="<?= $baseUrl ?>/<?= Helper::e($p['gambar']) ?>" alt="<?= Helper::e($p['nama_produk']) ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="menu-icon-wrapper">
+                                            <i class="bi <?= $iconClass ?>"></i>
+                                        </div>
+                                    <?php endif; ?>
                                     <div class="card-body p-3 d-flex flex-column justify-content-between">
                                         <div>
                                             <div class="d-flex justify-content-between align-items-center mb-1">
@@ -189,12 +203,38 @@ $extraScripts = [$baseUrl . '/assets/js/kasir.js'];
 
                     <!-- Kontainer Rincian Biaya & Form Checkout -->
                     <div id="cart-summary" class="d-none border-top pt-3">
-                        <div class="d-flex justify-content-between small text-muted mb-1">
+                        <div class="d-flex justify-content-between small text-muted mb-2">
                             <span>Subtotal:</span>
                             <span id="summary-subtotal" class="fw-semibold text-dark">Rp 0</span>
                         </div>
+
+                        <!-- Input Diskon Fleksibel (Bisa Diketik Manual: Persen atau Rupiah) -->
+                        <div class="mb-3 p-2 bg-light rounded-3 border">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="input-discount" class="form-label small fw-semibold text-secondary mb-0">
+                                    <i class="bi bi-tag-fill text-resto me-1"></i>Atur Diskon:
+                                </label>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-resto py-0 px-2 active" id="btn-disc-percent" title="Mode Persentase (%)">%</button>
+                                    <button type="button" class="btn btn-sm btn-outline-resto py-0 px-2" id="btn-disc-nominal" title="Mode Nominal Rupiah (Rp)">Rp</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btn-disc-auto" title="Hitung Otomatis Berdasarkan Aturan Bertingkat">
+                                        <i class="bi bi-magic me-1"></i>Auto
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white fw-semibold" id="addon-disc-unit">%</span>
+                                <input type="number" id="input-discount" class="form-control form-control-sm" placeholder="0" min="0" step="any" value="0">
+                                <span class="input-group-text bg-white text-success fw-bold" id="summary-discount-badge">- Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1 px-1">
+                                <small class="text-muted" style="font-size: 0.72rem;" id="discount-status-label">Otomatis (Tier UKK)</small>
+                                <small class="text-danger d-none fw-semibold" id="discount-error-label" style="font-size: 0.72rem;">Melebihi subtotal!</small>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between small text-muted mb-1">
-                            <span>Diskon Bertingkat (<span id="summary-discount-rate">0%</span>):</span>
+                            <span>Potongan Diskon (<span id="summary-discount-rate">0%</span>):</span>
                             <span id="summary-discount" class="text-success fw-semibold">- Rp 0</span>
                         </div>
                         <div class="d-flex justify-content-between small text-muted mb-1">
@@ -237,6 +277,7 @@ $extraScripts = [$baseUrl . '/assets/js/kasir.js'];
                         <!-- Form POST untuk Menyimpan Transaksi -->
                         <form action="kasir.php" method="POST" id="form-checkout">
                             <input type="hidden" name="cart_payload" id="cart-input-payload" value="">
+                            <input type="hidden" name="custom_discount" id="cart-input-discount" value="">
                             <button type="submit" class="btn btn-resto w-100 py-2 rounded-3 fw-bold shadow-sm" id="btn-submit-order" disabled>
                                 <i class="bi bi-check-circle me-1"></i> Proses Transaksi
                             </button>
